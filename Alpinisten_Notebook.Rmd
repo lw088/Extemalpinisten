@@ -1,0 +1,828 @@
+---
+title: "Extrem-Alpinisten"
+output: html_notebook
+---
+
+```{r Erstellt unser Netzwerk, message=FALSE, warning=FALSE, paged.print=TRUE}
+library(igraph)
+el <- read.csv("https://raw.githubusercontent.com/lw088/extremalpinisten/master/edgelist_extremalpinisten.csv", header=T, as.is=T, sep=",")
+nodes <- read.csv("https://raw.githubusercontent.com/lw088/Extemalpinisten/master/nodelist_extremalpinisten.cvs", header=T, as.is=T, sep=",")
+ea_matrix <- as.matrix(el)
+ea <- graph_from_data_frame(d=ea_matrix, vertices=nodes, directed=FALSE)
+list.edge.attributes(ea)
+```
+
+Analyse: ungerichtetet two-mode Netzwerk mit 154 Knoten und 224 Kanten
+```{r}
+is.simple(ea)
+```
+
+
+```{r Attribute analysieren, message=FALSE, warning=FALSE}
+list.edge.attributes(ea)
+list.vertex.attributes(ea)
+```
+
+Problem: Ihre Attribute relation, awardyear und deathyear sind nicht numerisch kodiert.
+
+
+
+```{r Visualisierungen definieren}
+#Farben für Geschlecht und Berg
+V(ea)[V(ea)$sex == 1]$color <- "pink" #weiblich
+V(ea)[V(ea)$sex == 2]$color <- "lightblue" #maennlich
+V(ea)[V(ea)$sex == 3]$color <- "lightgreen" #divers
+V(ea)[V(ea)$sex == 99]$color <- "grey80" #Berg
+
+#Form für Menschen und Berge festlegen
+V(ea)[V(ea)$type == 1]$shape <- "circle" #Mensch
+V(ea)[V(ea)$type == 2]$shape <- "square" #Berg
+```
+Hier ist nur die Visualisierung definiert worden. 
+
+```{r Bisualisierung Gesamtnetzwerk, fig.height=10, fig.width=16}
+plot(ea,
+     asp=0,
+     layout=layout_with_kk,
+     edge.arrow.size=.5,
+     vertex.size=10,
+     vertex.frame.color=NA,
+     main ="Übersicht Gesamtnetzwerk",
+     sub="Grau - Berg; Hellblau - Männer, Rosa - Frauen, Grün - Expeditionen")
+```
+Das Gesamtnetzwerk ist geplottet, alle Knoten sind gleich gewichtet, des werden ausschließlich Beziehungen angezeigt.
+
+#Habe versucht anhand des Skripts das Netzwerk zu vereinfachen - hat sich im Vergleich zu Gesamtnetzwerk nichts verändert
+```{r Gesamtnetzwerk vereinfachen, fig.height=10, fig.width=16}
+
+# Um die Ergebnisse der Gewichte nicht zu verfälschen, werden die EdgeAttribute deathyear und awardyear gelöscht.
+eav <- delete_edge_attr(ea, "deathyear")
+eav <- delete_edge_attr(ea, "awardyear")
+list.edge.attributes(eav)
+
+#mit Befehl simplify das Netzwerk auf Gewicht der Edge Attribute Beziehung zusammenfassen
+
+is_simple(eav)
+
+ea_sim <- simplify(eav,edge.attr.comb=list)
+is_simple(ea_sim)
+
+ea_sim
+
+# die aggregierten Werte von ea_sim werden deutlich
+list.edge.attributes(ea_sim)
+
+edge.attributes(ea_sim)$weight
+
+#Simplify Netzwerk plotten
+
+plot(ea_sim,
+ layout=layout_with_kk,
+ asp=0,
+ layout=layout_with_kk,
+ edge.arrow.size=.5,
+ vertex.size=10,
+ vertex.frame.color=NA,
+ edge.arrow.size=.7,
+ edge.color="black",
+ edge.width=E(ea_sim)$weight/2, 
+ edge.curved=.2,
+ edge.curved=curve_multiple(ea_sim)
+ )
+```
+
+#Jetzt habe ich versucht, nur starke Beziehungen herauszufilterm
+```{r Teilnetzwerk aus starken Beziehungen erstellen}
+
+ea_sim_strong <- subgraph.edges(ea_sim, E(ea_sim))
+ea_sim_strong
+
+plot(ea_sim_strong,
+ asp=0,
+ layout=layout_with_kk,
+ edge.width=E(ea_sim_strong)$weight/2,
+ edge.curved=.3,
+ edge.curved=curve_multiple(ea_sim_strong),
+ )
+
+
+```
+
+```{r Teilnetzwerk Seilschaften}
+#Auflisten der Kletterer in Beziehungen zueinandder
+ea
+list.vertex.attributes(ea)
+vertex.attributes(ea)$nationality
+#Filtern nach nur Kletterern ohne Berge, nationality 99 rausfiltern, damit keine Bergen gezeigt werden; se = Seilschaften
+se<- delete_vertices(ea, V(ea)[nationality == "99"])
+
+
+#Plot nach Beziehungen
+plot(se,
+     layout=layout_with_kk,
+     edge.arrow.size=.3,
+     main="Alle Kletterer",
+     vertex.size=degree(se, mode="all")*3,
+     vertex.label.dist=.8,
+     vertex.label.degree=0,
+     vertex.label.cex=.6,
+     vertex.label.family="Helvetica",
+     vertex.label.font=2,
+     vertex.label.color="black"
+     #vertex.label=NA,
+     #vertex.frame.color=NA
+     )
+
+#Isloierte Gruppen (2er) ausgefiltert
+iso_se <- which(degree(se)<=1)
+se_clean <- delete.vertices(se, iso_se)
+
+
+plot(se_clean,
+     layout=layout_with_kk,
+     edge.arrow.size=.3,
+     main="Alle Kletterer ohne Isolationsbeziehungen",
+     vertex.size=degree(se_clean, mode="all")*3,
+     vertex.label.dist=.8,
+     vertex.label.degree=0,
+     vertex.label.cex=.6,
+     vertex.label.family="Helvetica",
+     vertex.label.font=2,
+     vertex.label.color="black",
+     #vertex.label=NA,
+     #vertex.frame.color=NA
+     )
+```
+Analyse: Hayden Kennedy und Marko Perzelj scheinen Verbindungsakteure zweier Gruppen (Nationen) zu sein. Wir fokussieren uns auf die Ego-Netzwerke der beiden Akteuren, um sie genauer zu analysieren. Dabei betrachten wir insbesondere die Verbindung der Nationen.
+
+```{r Egonetzwerk Hayden Kennedy}
+#Ego Netzwerk erstellen Hayden Kennedy 
+ego_hake <- make_ego_graph(ea, order=1, nodes= V(ea)$name=="Hayden Kennedy", mode="all")
+ego_hake1 <- ego_hake[[1]]
+
+#2 Siege sind auch 2 unterschiedliche Nationalitäten?
+#V(ea)[V(ea)$nationality == 4]$frame.color <- "red" #Amerikaner
+#V(ea)[V(ea)$nationality == 10]$frame.color <- "darkblue" #Slowenien
+#V(ea)[V(ea)$nationality == 6]$frame.color <- "orange" #Frankreich
+
+
+#Netzwerk plotten, Verbindung zweier Gruppen durch zwei Siege mit zwei Gruppen ist bestätigt, die Nationen sind gemischt, nicht nur 2 Gruppen sonder A) Amerikaner und B) Slowenien, Frankreich und Amerika
+
+plot(ego_hake1,
+      layout=layout_with_kk,
+      main="Egonetzwerk Hayden Kennedy",
+      edge.arrow.size=.3,
+      vertex.size=degree(ego_hake1, mode="all")*5,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      )
+
+
+```
+Analyse: Wir sehen, dass Hayden Kennedy mit zwei unterschiedlichen Gruppen 2 Siege an Bergen eingeholt hat. Die eine Gruppe besteht ausschließlich aus Amerikanern. Gruppe zwei ist durchmischt. Frankreich, Slowenien und Amerika haben Cerro Kishtwar zusammen bestiegen. Kennedy scheint also mit allen Nationalitäten zu klettern.
+
+```{r Egonetzwerk Hayden Kennedy mit Freundesfreunden}
+#Ego Netzwerk erstellen Hayden Kennedy mit seinen Freundesfreunden
+ego_hake <- make_ego_graph(ea, order=2, nodes= V(ea)$name=="Hayden Kennedy", mode="all")
+ego_hake1 <- ego_hake[[1]]
+
+#2 Siege sind auch 2 unterschiedliche Nationalitäten?
+#V(ea)[V(ea)$nationality == 4]$frame.color <- "red" #Amerikaner
+#V(ea)[V(ea)$nationality == 10]$frame.color <- "darkblue" #Slowenien
+#V(ea)[V(ea)$nationality == 6]$frame.color <- "orange" #Frankreich
+
+
+
+#Netzwerk plotten, Verbindung zweier Gruppen durch zwei Siege mit zwei Gruppen ist bestätigt, die Nationen sind gemischt, nicht nur 2 Gruppen sonder A) Amerikaner und B) Slowenien, Frankreich und Amerika
+
+plot(ego_hake1,
+      layout=layout_with_kk,
+      main="Egonetzwerk Hayden Kennedy mit Beziehungen zweiter Generation",
+      edge.arrow.size=.3,
+      vertex.size=degree(ego_hake1, mode="all")*5,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      )
+
+```
+Analyse: Wir können sehen, dass Kennedy tatsächlich das Verbindungsstück zweier Nationen ist - auch wenn Marko Prezelj eine große Community bildet, besteht diese nur aus Sloewnene und schafft daher kein internationales Nwetzwerk. 
+
+```{r Der erfolgreichste Kletterer}
+
+
+#Beziehungen unter Personen werden gelöscht
+sg_ek <-subgraph.edges(ea, E(ea)[relation=="1"])
+
+#Netzwerk Personen mit Bergen plotten
+plot(sg_ek,
+     layout=layout_with_kk,
+     vertex.label.color="black",
+     vertex.label.family="Helvetica",
+     vertex.label=NA,
+     vertex.frame.color="black",
+     edge.color="grey20",
+     main = "Visualisierung Gesamtnetzwerk nur Personen mit Bergen in Beziehung",
+     )
+
+#Filtern nach größtem degree- Wert in Beziehungen von Personen zu Bergen
+
+# Einfache Berechnung des Degree als Gesamtwert
+dea <- degree(sg_ek)
+dea
+
+
+plot(sg_ek,
+     layout=layout_with_kk,
+     vertex.size=dea*5,
+     vertex.label.color="black",
+     vertex.label.family="Helvetica",
+     vertex.label.size="2",
+     #vertex.label=NA,
+     vertex.frame.color=NA,
+     edge.color="grey20",
+     main = "Gesamtnetzwerk Mensch und Berg")
+
+
+```
+Analyse: Wir berücksichtigen die degree Werte der Berge in diesem Zusammenhang erstmal nicht. Die höchsteh der degree Werte der Personen haben Paul Ramsden und Marko Prezelj. In folgenden Egonetzwerken sollen die beiden Personen gegenübergestellt werden.
+
+```{r Egonetzwerke Paul Ramsden und Marko Prezelj und Bestimmung degree Wert}
+
+#Ego Netzwerk erstellen Paul Ramsden
+ego_para <- make_ego_graph(ea, order=1, nodes= V(ea)$name=="Paul Ramsden", mode="all")
+ego_para1<- ego_para[[1]]
+
+#relations Farbe geben
+
+E(ego_para1)[E(ego_para1)$relation == 1]$color <- "green" #Gewinnerberg
+E(ego_para1)[E(ego_para1)$relation == 3]$color <- "black" #Seilschaft
+
+#Netzwerk plotten
+plot(ego_para1,
+      layout=layout_with_kk,
+      main="Egonetzwerk Marko Prezelj",
+      edge.arrow.size=.3,
+      vertex.size=degree(ego_para1, mode="all")*5,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      )
+#Ego Netzwerk erstellen Marko Prezelj
+ego_mapr <- make_ego_graph(ea, order=1, nodes= V(ea)$name=="Marko Prezelj", mode="all")
+ego_mapr1<- ego_mapr[[1]]
+
+#relations Farbe geben
+
+E(ego_mapr1)[E(ego_mapr1)$relation == 1]$color <- "green" #Gewinnerberg
+E(ego_mapr1)[E(ego_para1)$relation == 3]$color <- "black" #Seilschaft
+
+plot(ego_mapr1,
+      layout=layout_with_kk,
+      main="Egonetzwerk Marko Prezelj",
+      edge.arrow.size=.3,
+      vertex.size=degree(ego_mapr1, mode="all")*5,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      )
+
+```
+Analyse: Sowohl Paul Ramsen alsauch Marko Prezelj haben jeweils 4 Berge erfolgreich bestiegen und den Piolets D'Or gewonnen. Somit sind die beiden die erfolgreichsten KLetterer, die mit diesem Preis ausgezeichnet worden sind!
+Hinweis: Beziehung von Marko Prezelj zu Cerro Kishtwar ist Schwarz, wissen nicht wieso, in Nodelist richtig, müsste eigentlich Grün sein!
+
+```{r beliebtester Berg}
+
+
+dea <- degree (ea)
+dea
+
+which.max(dea)
+
+```
+
+```{r Die Nation mit den meisten unterschiedlichen Siegern fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+#Beziehungen von Personen zu Bergen bei denen Sie nicht gewonnen haben werden gelöscht
+sg_en <-subgraph.edges(ea, E(ea)[relation=="1"])
+
+#Die Namen werden gegen die ID Nation getauscht angezeigt, uns interessiert nur die Nationalität
+V(sg_en)$label <- V(sg_en)$nationality
+
+#Netzwerk plotten
+plot(sg_en,
+      layout=layout_with_kk,
+      main="Nationen und Berge",
+      edge.arrow.size=.3,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      )
+
+#Berge entfernen
+ea_na<- delete_vertices(sg_en, V(sg_en)[type== 2])
+
+ea_na
+list.vertex.attributes(ea_na)
+vertex.attributes(ea_na)$nationality
+
+#Herausfiltern, wie viel Kletterer pro Nation
+V(ea_na)[V(ea_na)$nationality == 4]$color <- "red" #Amerikaner
+V(ea_na)[V(ea_na)$nationality == 10]$color <- "blue" #Slowenien
+V(ea_na)[V(ea_na)$nationality == 7]$color <- "yellow" #Japan
+V(ea_na)[V(ea_na)$nationality == 6]$color <- "orange" #Franzosen
+
+#Netzwerk plotten
+plot(ea_na,
+      layout=layout_with_fr,
+      main="Nationen, mit den meisten unterschiedlichen Siegern",
+      edge.arrow.size=.3,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub= "Orange-Frankreich; Dunkelblau-Slowenien; Rot-Amerika; Gelb-Japan; Hellblau-Andere"
+      )
+
+```
+Analyse: Frankreich hat mit 16 unterschiedlichen Siegern die am breitest aufgestellte Kletterfraktion. Dicht gefolgt von den Amerikanern mit 14 unterschiedlichen Siegern, den Japanern mit 11 und den Slowenen mit 10. Interessant ist nun herauszufinden, ob die vier Nationen gleichzeitig zu den Nationen mit den meisten Siegen insgesamt, unabhängig von der Person, gehören. 
+
+```{r Wer ist unter den Franzosen der Player, fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+
+
+fr <- delete_vertices(ea, V(ea)[nationality!= "6" & nationality!= "99"])
+fr <- delete_vertices(ea, V(ea)[nationality!= "6" & nationality!= "99"])
+sg_fr <-subgraph.edges(fr, E(fr)[relation!="2"])
+
+
+# Berge mit degree =0 löschen
+iso_fr <- which(degree(sg_fr)<=1)
+fr_clean <- delete.vertices(fr, iso_fr)
+
+# Netzwerk französische Seilschaften und bestiegene Gewinnerberge
+
+plot(fr_clean,
+     layout=layout_with_fr,
+     edge.arrow.size=.3,
+     main="Französische Alpinisten mit bestiegenen Bergen",
+     vertex.size=degree(fr_clean, mode="all")*5,
+     vertex.label.dist=.8,
+     vertex.label.degree=0,
+     vertex.label.cex=.6,
+     vertex.label.family="Helvetica",
+     vertex.label.font=1,
+     vertex.label.color="black",
+     #vertex.label=NA,
+     #vertex.frame.color=NA,
+     sub="blau=männlich pink=weiblich grau=Berg")
+
+
+```
+Franzosen sind eine breit gefächerte Siegernation. Jedoch sind alle Siege einmalige Siege. Im Vergleich haben die erfolgreichsten Kletterer generell viermal gewonnen, siehe Paul Ramsden (England) und Marko Prezelj (Slowenien).
+Sind demnach Slowenien und England, insbesondere Slowenien nicht die heimlichen Siegernation in Bezug auf die Anzahl der Gewinne. Denn nach dem obrigen Schaubild sind die Franzosen nur die Nation mit den meisten Preisträgern.
+
+```{r Nur Todesberge, fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+#Teilnetzwerke nach Todesbergen relation=2
+sg_tb <-subgraph.edges(ea, E(ea)[relation=="2"])
+
+#Netzwerk plotten
+plot (sg_tb,
+      layout=layout_with_kk,
+      main="Todesberge mit Verunglückten",
+      edge.arrow.size=.4,
+      vertex.size=degree(sg_tb, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      vertex.frame.color=NA,
+      sub="Grau-Berge; Hellblau-Männer; Rosa-Frauen")
+```
+```
+
+```{r Teilnetzwerk Frauen}
+
+vertex.attributes(ea)$sex
+ea_fem <- delete_vertices(ea, V(ea)[sex != 1])
+ea_fem
+plot(ea_fem,
+     layout=layout_with_kk,
+     edge.arrow.size=.3,
+     main="Extremalpinisten (weiblich)",
+     vertex.color="pink",
+     vertex.size=50,
+     vertex.frame.color= "black",
+     vertex.label.color= "black",
+     sub="pink=weiblich grau=Berg"
+
+```
+
+Interpretation: Unter den Gewinnern sind nur zwei Frauen, die jeweils auch keinen Kontakt zueinander haben. Unter Piolets d'or gewinnern gibt es keine Verbindung zwischen Siegerinnen. Der Klettersport im Profibereich scheint außerdem Männern vorbehalten zu sein.
+
+
+```{r Isolates löschen}
+
+# Isolates festlegen
+# wir suchen diejenigen Knoten, die einen Degree-Wert von 0 haben, also mit keinem anderen Knoten im Netzwerk verbunden sind.
+
+isolated <- which(degree(ea_fem)==0)
+isolated
+
+# wir löschen jetzt alle Knoten aus dem Netzwerk, die die Bedingung "isolated" erfüllen und generieren das neue Netzwer ea_fem_clean
+ea_fem_clean <- delete.vertices(ea_fem, isolated)
+ea_fem_clean
+vertex.attributes(ea_fem_clean)$sex
+
+# Plot
+plot(ea_fem_clean,layout=layout_with_kk,
+     edge.arrow.size=.3,
+     main="Extremalpinisten (weiblich) ohne Isolates",
+     vertex.size=15,
+     vertex.frame.color=NA,
+     sub="red=weiblich, grau=Berg")
+```
+```
+# Auswahl von Nationalitäten
+
+Codebuch
+https://github.com/ns127/extremalpinisten/blob/master/codebuch%20markdown.Rmd
+```{r Nur Amerikaner, fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+ea
+list.vertex.attributes(ea)
+vertex.attributes(ea)$nationality
+
+# Codebuch https://github.com/ns127/extremalpinisten/blob/master/codebuch%20markdown.Rmd
+# Amerikaner sind mit "4" codiert
+
+# Wenn Sie jetzt mit ungleich 4 alles löschen, löschen Sie natürlich auch alle 99 Berge mit. Deshalb müssen Sie mit der logischen Verknüpfung und arbeiten. Dann bleiben alle Berge Amerikaner, aber auch alle Berge.
+
+usa <- delete_vertices(ea, V(ea)[nationality!= "4" & nationality!= "99"])
+
+# Damit Sie nur die Verbindung der Berge und der amerikanische Seilschaften übrig bleibt, müssen Sie wie oben wieder alle Berge mit dem Degree = 0 löschen.
+iso_usa <- which(degree(usa)==0)
+usa_clean <- delete.vertices(usa, iso_usa)
+
+# Jetzt haben Sie ein Netzwerk mit den amerikanischen Seilschaften und den bestiegenen Bergen.
+usa_clean
+
+plot(usa_clean,
+     layout=layout_with_fr,
+     edge.arrow.size=.3,
+     main="Amerikanische Alpinisten mit bestiegenen Bergen",
+     vertex.size=degree(usa_clean, mode="all")*5,
+     vertex.label.dist=.8,
+     vertex.label.degree=0,
+     vertex.label.cex=.6,
+     vertex.label.family="Helvetica",
+     vertex.label.font=2,
+     vertex.label.color="black",
+     #vertex.label=NA,
+     #vertex.frame.color=NA,
+     sub="blau = männlich pink= weiblich grau= Berg")
+```
+
+Interpretation:
+Kyle Dempster scheint einer der erfolgreichsten amerikanischen Kletterer zu sein (hoher Degree-Wert).
+
+
+
+Interpretation Howse Peak scheint der Endgegner für die Kletterer zu sein. Hier sind von 12 Verstorbenen 3 umgekommen.
+
+```{r multiplex, exercise=TRUE, exercise.lines = 20}
+
+E(ea)[E(ea)$vertex == 1]$color <- "blue" 
+E(ea)[E(ea)$vertex == 2]$color <- "green"
+E(ea)[E(ea)$vertex == 3]$color <- "red"
+
+plot(ea,
+     edge.arrow.size=.1,
+     vertex.color="gray90",
+     vertex.frame.color="white",
+     layout=layout_with_kk,
+     edge.curved=curve_multiple(ea),
+     main="Multiplexes Netzwerk, d.h. verschiedene Formen der Beziehung",
+     sub="n=38, blau=Zusammenarbeit, grün=Ratsuche, rot=Beziehung")
+```
+```
+
+
+```{r Egonetzwerk Keta, fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+#Nach Frauen filtern
+sg_wo <- delete_vertices(ea, V(ea)[sex!="1"])
+
+
+#Netzwerk plotten
+plot (sg_wo,
+      layout=layout_with_fr,
+      main="Extremalpinisten Frauen",
+      edge.arrow.size=.3,)
+      
+#Ego Netzwerk erstellen Kei Taniguchi
+ego_keta <- make_ego_graph(ea, order=1, nodes= V(ea)$name=="Kei Taniguchi", mode="all")
+ego_keta1 <- ego_keta[[1]]
+
+#Netzwerk plotten
+plot(ego_keta1,
+      layout=layout_with_fr,
+      main="Egonetzwerk Kei Taniguchi",
+      edge.arrow.size=.3,
+      vertex.size=degree(ego_keta1, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub= "blau= männlich pink= weiblich grau= Berg")
+      
+
+
+```
+Als eine der wenigen Frauen bekletterte Sie in nur zu zweit den Kamet und starb darauf bei einem Berg Unglück.
+
+
+```{r Egonetzwerk Lise Billon, fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+#Ego Netzwerk erstellen Lise Billon
+ego_libi <- make_ego_graph(ea, order=1, nodes= V(ea)$name=="Lise Billon", mode="all")
+ego_libi1 <- ego_libi[[1]]
+
+#Netzwerk plotten
+plot(ego_libi1,
+      layout=layout_with_fr,
+      main="Egonetzwerk Kei Taniguchi",
+      edge.arrow.size=.3,
+      vertex.size=degree(ego_libi1, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub= "blau= männlich pink= weiblich grau= Berg")
+```
+
+
+```{r Mehrfachbesteigungen, fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+
+#Teilnetzwerke nach Mehrfachbesteigungen
+sg_gb <-subgraph.edges(ea, E(ea)[relation=="1"])
+
+#Netzwerk plotten
+plot (sg_gb,
+      layout=layout_with_fr,
+      main="Alle Gewinnerberge",
+      edge.arrow.size=.4,
+      vertex.size=degree(sg_gb, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub= "blau= männlich pink= weiblich grau= Berg")
+
+iso_gb <- which(degree(sg_gb) =! 0)
+gb_clean <- delete.vertices(sg_gb, iso_gb)
+
+plot(gb_clean,
+      layout=layout_with_fr,
+      main="Gewinnerberge",
+      edge.arrow.size=.4,
+      vertex.size=degree(sg_gb, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub= "blau= männlich pink= weiblich grau= Berg")
+```
+
+
+
+```{r, meistbestiegener berg, fig.height=6 , fig.width=10, warning=FALSE, paged.print=FALSE}
+
+#Teilnetzwerk nach nur Bergen
+sg_b<-delete_vertices(ea, V(ea))[type= "1"]
+
+#Netzwerk plotten
+plot(sg_b, type="1",
+     layout=layout_with_kk,
+     edge.arrow.size=.3,
+     main="Berg",
+     vertex.color="pink",
+     vertex.size=50,
+     vertex.frame.color= "black",
+     vertex.label.color= "black",
+     sub="grau=Berg")
+
+#Filtern nach Bergen die einen degreewert von mehr als 10 haben
+sg_b <- which(degree(sg_b)>=10)
+b_clean <- delete.vertices(sg_b)
+
+
+#Netzwerk plotten
+plot (b_clean,
+      layout=layout_with_fr,
+      main="Alle Berge",
+      edge.arrow.size=.4,
+      vertex.size=degree(sg_b, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub="Alle Berge mit einem Degree Wert >= 10 ")
+
+
+
+```
+Aus den übriggebliebenen Bergen, wollten wir noch weitere Egonetzwerke erstellen mit den Personen, die die beliebtesten Berge beklettert haben.
+```{r erfolgreichster kletterer, fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+
+#Filtern nach der Beziehung Gewinnerbesteigungen
+sg_ek<-subgraph.edges(ea, E(ea)[relation=="1"])
+plot (sg_ek,
+      layout=layout_with_fr,
+      main="Alle Berge",
+      edge.arrow.size=.4,
+      vertex.size=degree(sg_ek, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub="Alle Gewinnerbeziehungen")
+
+
+
+
+
+```
+Wir wollen weiter filtern wer am meisten Beziehungen zu einem Gewinnerberg hat. Also die Personen herausfinden, die den Preis am häufigsten gewonnen hat.
+```{r erfolgreichste Nation, , fig.height=6, fig.width=10, warning=FALSE, paged.print=FALSE}
+en <- delete_vertices(ea, V(ea)[nationality!= "?" & nationality!= "99"])
+
+plot (en,
+      layout=layout_with_fr,
+      main="Die erfolgreichste Nation",
+      edge.arrow.size=.4,
+      vertex.size=degree(sg_b, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub=" pink= Frauen, blau= Männer, grau= Berge")
+
+```
+Wir wollten nach der erfolgreichsten Nation filtern, also der Attributwert der am meisten vorkommt.---
+
+
+!Ab hier hat Luna Sachen nochmal ausprobiert:
+```{r setup, include=FALSE}
+el <- read.csv("https://raw.githubusercontent.com/ns127/extremalpinisten/master/edgelist_extremalpinisten.csv", header=T, as.is=T, sep = ",")
+nodes <- read.csv("https://raw.githubusercontent.com/ns127/extremalpinisten/master/nodelist_extremalpinisten.csv", header=T, as.is=T, sep = ",")
+edgematrix <-as.matrix(el)
+ea <- graph_from_data_frame(d=edgematrix, vertices=nodes, directed=FALSE)
+```
+Analyse: ungerichtetet two-mode Netzwerk mit 154 Knoten (NODES) und 224 Kanten (EL)
+
+```{r Visualisierung}
+     plot(ea,
+     edge.arrow.size=0.1,
+     edge.color="dark grey",
+     edge.curved=curve_multiple(ea),
+     vertex.label.size=3,
+     rescale=FALSE,
+     xlim=c(0.0,3.0),
+     ylim=c(-3.0,20.0),
+     main="Gesamtnetzwerk",
+     sub="Personen: Kreis; Männer:blau, Frauen:rosa, Gruppen: grau
+          Berge: Quadraut; grau")
+
+par(mar=c(0,0.5,0.5,0)) 
+
+ #Farben für Geschlecht und Berg
+V(ea)[V(ea)$sex == 1]$color <- "pink" #weiblich
+V(ea)[V(ea)$sex == 2]$color <- "lightblue" #maennlich
+V(ea)[V(ea)$sex == 99]$color <- "grey80" #Berg
+
+#Form für Menschen und Berge festlegen
+V(ea)[V(ea)$type == 1]$shape <- "circle" #Mensch
+V(ea)[V(ea)$type == 2]$shape <- "square" #Berg
+```
+Visualisierung des Netzwerks, gesamt
+
+```{r subgraph_edges; Todesberge}
+list.edge.attributes(ea)
+edge.attributes(ea)$relation
+
+tb <- subgraph.edges(ea, E(ea)[relation==2]) 
+tb
+
+par(mar=c(0,0,0,0))
+
+plot(tb,
+     asp=0, 
+     vertex.size=8,
+     edge.arrow.size=.3,
+     layout=layout_with_kk,
+     edge.color="blue",
+     edge.curved=.2,
+     edge.curved=curve_multiple(tb),
+     ylim=c(-2.0,2.0),
+     main="Todesberge",
+     sub="Todesberge: Quadrat, grau; verstorbene Kletterer: Kreis, Frau: rosa; Mann: blau")
+
+par(mar=c(0,0.5,0.5,0)) 
+```
+Todesberge mit verstorbenen Kletterern, nach Geschlecht; Howse Peak scheint der "Entgegner" zu sein; 3 Menschen sind bereits unabhängig voneinander bei der Besteigung verstorben. 
+```{r subgraph_edges; Seilschaften}
+list.edge.attributes(ea)
+edge.attributes(ea)$relation
+
+se <- subgraph.edges(ea, E(ea)[relation==3]) 
+se
+
+par(mar=c(0,0,0,0))
+
+plot(se,asp=0, 
+     vertex.size=8,
+     vertex.label=NA,
+     edge.arrow.size=.3,
+     layout=layout_with_kk,
+     edge.color="blue",
+     edge.curved=.1,
+     edge.curved=curve_multiple(se),
+     main="Seilschaften",
+     sub="Seilschaften")
+
+par(mar=c(0,0.5,0.5,0)) 
+```
+
+```{r subgraph_edges; Gewinnerberge ohne Tod}
+list.edge.attributes(ea)
+edge.attributes(ea)$relation
+
+#gb <- subgraph.edges(gb,E(gb)[type=="2"]) 
+#gb <- delete_vertices(gb,V(gb)[type!="1"]) #etwas rauslöschen
+#gb <- subgraph.edges(gb, E(gb)[type!="1"]) #alles rauslöschen außer 1 sache
+
+par(mar=c(0,0,0,0))
+
+plot(gb,
+     asp=0, 
+     vertex.size=8,
+     edge.arrow.size=.3,
+     layout=layout_with_kk,
+     edge.color="blue",
+     edge.curved=.1,
+     edge.curved=curve_multiple(gb),
+     main="Gewinnerberge ",
+     sub="Berge mit erfolgreichen Siegen ohne Todesfolge")
+
+par(mar=c(0,0.5,0.5,0)) 
+```
+Gewinnerberge, Todesberge und Menschen, die an Berg gestorben sind, tauchen hier nicht auf 
+```{r ego_netzwerk, Howse Peak}
+
+ego_size(ea)
+
+#Nach Bergen filtern
+sg_b <- delete_vertices(ea, V(ea)[type!="2"])
+
+
+#Netzwerk plotten
+plot (sg_b,
+      layout=layout_with_fr,
+      main="Berge",
+      edge.arrow.size=.3,)
+      
+#Ego Netzwerk erstellen Howse Peak
+ego_howse <- make_ego_graph(ea, order=1, nodes= V(ea)$name=="Howse Peak", mode="all")
+
+#Netzwerk plotten
+plot(ego_howse,
+      layout=layout_with_kk,
+      main="Egonetzwerk Howse Peak",
+      edge.arrow.size=.3,
+      vertex.size=degree(ego_howse, mode="all")*10,
+      vertex.label.degree=0,
+      vertex.label.dist=.8,
+      vertex.label.cex=.60,
+      vertex.label.font=1,
+      vertex.label.color="black",
+      sub= "blau= männlich pink= weiblich grau= Berg")
+
+
+```
+
