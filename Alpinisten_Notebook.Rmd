@@ -5,7 +5,7 @@ output: html_notebook
 
 ```{r Erstellt unser Netzwerk, message=FALSE, warning=FALSE, paged.print=TRUE}
 library(igraph)
-el <- read.csv("https://raw.githubusercontent.com/lw088/extremalpinisten/master/edgelist_extremalpinisten.csv", header=T, as.is=T, sep=",")
+el <- read.csv("https://raw.githubusercontent.com/lw088/Extemalpinisten/master/edgelist_extremalpinisten.csv", header=T, as.is=T, sep=",")
 nodes <- read.csv("https://raw.githubusercontent.com/lw088/Extemalpinisten/master/nodelist_extremalpinisten.cvs", header=T, as.is=T, sep=",")
 ea_matrix <- as.matrix(el)
 ea <- graph_from_data_frame(d=ea_matrix, vertices=nodes, directed=FALSE)
