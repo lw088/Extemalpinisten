@@ -1,0 +1,153 @@
+id,name,type,sex,nationality,mountain range
+alce,Aleš Česen,1,2,10,99
+alho,Alex Honnold,1,2,4,99
+algu,Alexander Gukov,1,2,8,99
+alla,Alexander Lange,1,2,8,99
+allo,Alexey Lonchinsky,1,2,8,99
+anor,Andreas Orgler,1,2,1,99
+anst,Andrej Stremfelj,1,2,10,99
+anli,Andrew Lindblade,1,2,5,99
+anpa,Andy Parkin,1,2,9,99
+anmo,Antoine Moineville,1,2,6,99
+arwu,Arthur Wutscher,1,2,1,99
+atwh,Athol Whimp,1,2,19,99
+bedi,Ben Ditto,1,2,4,99
+begu,Benjamin Guigonnet,1,2,6,99
+bjar,Bjorn Eivind Artun,1,2,11,99
+bode,Boris Dedeshko,1,2,16,99
+bolo,Boris Lorencic,1,2,10,99
+brno,Bruce Normand,1,2,9,99
+clal,Club Alpin Francais,1,3,6,99
+dala,David Lama,1,2,1,99
+deur,Denis Urubko,1,2,16,99
+dijo,Didier Jourdain,1,2,6,99
+disi,Diego Simari,1,2,14,99
+dmgo,Dmitry Golovchenko,1,2,8,99
+dmgr,Dmitry Grigoriev,1,2,8,99
+frma,Francois Marcigny,1,2,6,99
+frwi,Freddie Wilkinson,1,2,4,99
+frde,Frederic Degoulet,1,2,6,99
+fuic,Fumitaka Ichimura,1,2,7,99
+grzi,Graham Zimmerman,1,2,19,99
+haau,Hansjoerg Auer,1,2,1,99
+hake,Hayden Kennedy,1,2,4,99
+hene,Heli Neswadba,1,2,1,99
+hemi,Helias Millerioux,1,2,6,99
+hima,Hiroyoshi Manome,1,2,7,99
+iawe,Ian Welsted,1,2,2,99
+iwwo,Iwan Wolf,1,2,3,99
+jebr,Jed Brown,1,2,4,99
+jesu,Jerome Sullivan,1,2,6,99
+jowh,Josh Wharton,1,2,4,99
+juko,Juri Koschelenko,1,2,8,99
+kayo,Katsutaka Yokoyama,1,2,7,99
+kaam,Kazuki Amano,1,2,7,99
+kahi,Kazuya Hiraide,1,2,7,99
+keta,Kei Taniguchi,1,1,7,99
+kena,Kenro Nakajima,1,2,7,99
+kyde,Kyle Dempster,1,2,4,99
+lida,Lionel Daudet,1,2,6,99
+libi,Lise Billon,1,1,6,99
+luli,Luka Lindič,1,2,10,99
+lust,Luka Strazar,1,2,10,99
+mape,Manu Pellissier,1,2,6,99
+maho,Marek Holecek,1,2,13,99
+maal,Mark Allen,1,2,4,99
+mari,Mark Richey,1,2,4,99
+mapr,Marko Prezelj,1,2,10,99
+maau,Matthias Auer,1,2,1,99
+mipi,Michel Piola,1,2,3,99
+mifo,Mick Fowler,1,2,9,99
+myfo,Mychailo Fomin,1,2,18,99
+myba,Mykyta Balabanow,1,2,18,99
+nema,Nejc Marcic,1,2,10,99
+nibu,Nick Bullock,1,2,9,99
+nifa,Nicolas Favresse,1,2,12,99
+olli,Ole Lied,1,2,11,99
+olfa,Olivier Favresse,1,2,12,99
+para,Paul Ramsden,1,2,9,99
+rasl,Raphael Slawinski,1,2,20,99
+rial,Rick Allen,1,2,9,99
+ruex,Russische Expedition,1,3,8,99
+saal,Sandy Allan,1,2,17,99
+sevi,Sean Villanueva,1,2,12,99
+sefo,Sebastian Foissac,1,2,6,99
+sebo,Sebastien Bohin,1,2,6,99
+semo,Sebastien Moatti,1,2,6,99
+sera,Sebastien Ratel,1,2,6,99
+seni,Sergey Nilov,1,2,8,99
+sian,Simon Anthamatten,1,2,3,99
+stbe,Stéphane Benoist,1,2,6,99
+stho,Steve House,1,2,4,99
+stsw,Steve Swenson,1,2,4,99
+taao,Tatsuya Aoki,1,2,7,99
+thhu,Thomas Huber,1,2,15,99
+toli,Tom Livingstone,1,2,9,99
+tohu,Tomaz Humar,1,2,10,99
+toca,Tommy Caldwell,1,2,4,99
+uest,Ueli Steck,1,2,3,99
+urno,Urban Novak,1,2,10,99
+vafu,Vanja Furlan,1,2,10,99
+vian,Vince Anderson,1,2,4,99
+visp,Vincent Sprungli,1,2,6,99
+waba,Walerie Babanow,1,2,8,99
+yagr,Yannick Graziani,1,2,6,99
+yaha,Yasuhiro Hanatani,1,2,7,99
+yaok,Yasushi Okada,1,2,7,99
+yusa,Yusuke Sato,1,2,7,99
+zdha,Zdenek Hak,1,2,13,99
+zdhr,Zdenek Hruby,1,2,13,99
+b16,ama dablam,2,99,99,1
+b03,Annapurna,2,99,99,1
+b17,Burkett Needle,2,99,99,2
+b09,Cerro Kishtwar,2,99,99,1
+b10,Cerro Riso Patron,2,99,99,3
+b38,Cho Oyo,2,99,99,1
+b18,Chomolhari,2,99,99,1
+b19,Col D´Esperanza,2,99,99,3
+b11,Gave Ding,2,99,99,1
+b12,Hagshu,2,99,99,1
+b39,Hidden Peak,2,99,99,4
+b40,Jannu,2,99,99,1
+b02,K6 Westgipfel,2,99,99,4
+b41,K7 Westgipfel,2,99,99,4
+b42,Kalanka,2,99,99,1
+b20,Kamet,2,99,99,1
+b21,Kangchendzoenga,2,99,99,1
+b01,Kunyang Chhish,2,99,99,4
+b05,Kyashar,2,99,99,1
+b43,Latok 1,2,99,99,4
+b44,Lunag Ri,2,99,99,1
+b45,lupghar sar west,2,99,99,4
+b22,Makalu,2,99,99,1
+b23,Meru,2,99,99,1
+b24,Mount Bradley,2,99,99,5
+b04,Mount Laurens,2,99,99,6
+b46,Mount Logan,2,99,99,7
+b06,Muztagh Tower,2,99,99,4
+b08,Nanga Parbat,2,99,99,1
+b47,Nuptse 2,2,99,99,1
+b25,Nuptse Shar 1,2,99,99,1
+b48,Nyainqentanglha,2,99,99,1
+b07,Ogre,2,99,99,4
+b26,Pamir,2,99,99,1
+b27,Saser Kangri 2,2,99,99,4
+b28,Shispare,2,99,99,4
+b29,Shiva,2,99,99,1
+b30,Shivling,2,99,99,1
+b31,Siguniang Shan,2,99,99,8
+b13,Talung,2,99,99,1
+b32,Tengkangpoche,2,99,99,1
+b33,Thalay Sagar,2,99,99,1
+b14,Thamserku,2,99,99,1
+b15,The Fitz Traverse,2,99,99,3
+b34,Tingmiakulugssuit,2,99,99,9
+b35,Torre Egger,2,99,99,3
+b36,Torres Del Paine ,2,99,99,3
+b37,Xuelian Feng,2,99,99,10
+b50,Howse Peak,2,99,99,12
+b49,Kjerag Mountain,2,99,99,11
+b51,Langtang Lirung,2,99,99,1
+b52,Mojstrovka,2,99,99,13
+b53,Darran Mountain,2,99,99,14
+b54,Mount Kurodake,2,99,99,15
